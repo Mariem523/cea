@@ -14,12 +14,9 @@ def catalog_image_upload_to(instance, filename):
     return os.path.join("catalogs", "images", subdir, unique_name)
 
 def catalog_pdf_upload_to(instance, filename):
-    """
-    Store PDFs under MEDIA_ROOT/catalogs/pdfs/YYYY/MM/<uuid>.<ext>
-    """
     ext = filename.rsplit('.', 1)[-1].lower()
     unique_name = f"{uuid.uuid4().hex}.{ext}"
-    subdir = timezone.now().strftime("%Y/%Y/%m")  # you can choose YYYY/MM
+    subdir = timezone.now().strftime("%Y/%m")  # ✅ fixed
     return os.path.join("catalogs", "pdfs", subdir, unique_name)
 
 class Catalog(models.Model):

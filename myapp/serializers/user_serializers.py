@@ -46,7 +46,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model  = User
         # adjust fields as needed
-        fields = ('id', 'username',)
+        fields = ('id', 'username','password')
         read_only_fields = fields
 
 class ResetPasswordSerializer(serializers.Serializer):

@@ -1,6 +1,8 @@
 from rest_framework import generics
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
+
+from myapp.permissions import IsMember
 from ..models.catalog import Catalog
 from ..serializers.catalog_serializer import CatalogSerializer
 from django.shortcuts import get_object_or_404
@@ -9,24 +11,30 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.authentication import SessionAuthentication
+
+
+# Optionally: custom permission for "members"
+from rest_framework.permissions import BasePermission
+class IsMember(BasePermission):
+    message = "Members only."
+    def has_permission(self, request, view):
+        u = request.user
+        return bool(u and u.is_authenticated and u.groups.filter(name="members").exists())
 
 
 class PublicCatalogListView(generics.ListAPIView):
-    """
-    Anyone can see public catalogs.
-    """
-    queryset = Catalog.objects.filter(type=Catalog.PUBLIC)
+    queryset = Catalog.objects.filter(type=Catalog.PUBLIC).order_by("created_at")
     serializer_class = CatalogSerializer
     permission_classes = [AllowAny]
+    authentication_classes = [SessionAuthentication]
+
 
 class PrivateCatalogListView(generics.ListAPIView):
-    """
-    Only authenticated admins can see private catalogs.
-    """
-    queryset = Catalog.objects.filter(type=Catalog.PRIVATE)
+    queryset = Catalog.objects.filter(type=Catalog.PRIVATE).order_by("created_at")
     serializer_class = CatalogSerializer
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsMember]
+    authentication_classes = [SessionAuthentication]
 
 
 class CatalogCreateView(generics.CreateAPIView):
@@ -44,41 +52,34 @@ class CatalogCreateView(generics.CreateAPIView):
 
     # enable file uploads
     parser_classes = [MultiPartParser, FormParser]
-
+    
+# class PrivateCatalogListView(generics.ListAPIView):
+#     queryset = Catalog.objects.filter(type=Catalog.PRIVATE)
+#     serializer_class = CatalogSerializer
+#     authentication_classes = [TokenAuthentication]  # or SessionAuth if you switch
+#     permission_classes = [IsAuthenticated, IsMember]  # ✅ members only
 
 class CatalogPDFDownloadView(APIView):
-    """
-    Stream the catalog's PDF as a downloadable attachment.
-    - Public: anyone
-    - Private: only authenticated admins
-    """
-    authentication_classes = [TokenAuthentication]
-    permission_classes = [AllowAny]  # we'll enforce admin for private below
+    authentication_classes = [TokenAuthentication]  # or SessionAuth later
+    permission_classes = [AllowAny]  # keep; we’ll branch inside
 
     def get(self, request, pk, *args, **kwargs):
         catalog = get_object_or_404(Catalog, pk=pk)
 
-        # enforce admin-only for private catalogs
         if catalog.type == Catalog.PRIVATE:
-            user = request.user
-            if not (user and user.is_authenticated):
-                return Response(
-                    {"detail": "You do not have permission to download this file."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
+            # ✅ strictly require membership
+            if not (request.user and request.user.is_authenticated
+                    and request.user.groups.filter(name="members").exists()):
+                return Response({"detail": "Members only."}, status=status.HTTP_403_FORBIDDEN)
 
-        # try to open and stream the PDF
         file = catalog.pdf_file
         if not file or not file.name:
-            raise Http404("No PDF found for this catalog.")
+            raise Http404("No PDF found.")
 
-        try:
-            handle = file.open('rb')
-        except Exception:
-            raise Http404("Could not open file.")
-
-        # build response
+        handle = file.open('rb')
         filename = file.name.rsplit('/', 1)[-1]
-        response = FileResponse(handle, content_type='application/pdf')
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        return response
+        resp = FileResponse(handle, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+        # Optional hardening:
+        resp['X-Content-Type-Options'] = 'nosniff'
+        return resp

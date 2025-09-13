@@ -43,17 +43,8 @@ INSTALLED_APPS = [
     'myapp',
 ]
 AUTH_USER_MODEL = 'myapp.User'
+INSTALLED_APPS += ["corsheaders"]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework.authentication.TokenAuthentication',
-    ),
-}
-
-PASSWORD_HASHERS = [
-    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
-    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
-]
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -64,6 +55,21 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+}
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+]
+
 
 ROOT_URLCONF = 'zellis_back.urls'
 DATABASES = {
@@ -135,3 +141,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 CORS_ALLOW_ALL_ORIGINS = True
 MEDIA_ROOT = BASE_DIR / "media"
 MEDIA_URL  = "/media/"
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'   # 'None' if front/back are on different domains + HTTPS
+SESSION_COOKIE_SECURE = True      # True in production
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'Lax'      # 'None' if cross-site + HTTPS
+CORS_ALLOW_CREDENTIALS = True
+# CORS_ALLOWED_ORIGINS = ['https://your-frontend-domain.tld', 'http://localhost:4200']
+# CSRF_TRUSTED_ORIGINS = ['https://your-frontend-domain.tld', 'http://localhost:4200']
