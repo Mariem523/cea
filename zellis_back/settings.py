@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,8 +26,11 @@ SECRET_KEY = 'django-insecure-9n2!cege^k=zph69j^a1w9pothhcy8y^!y)3atc#h9y%i2v(^a
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# ALLOWED_HOSTS = []
 AUTH_USER_MODEL = 'myapp.User'
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS','localhost,127.0.0.1').split(',')
+csrf_env = os.getenv('CSRF_TRUSTED_ORIGINS','')
+CSRF_TRUSTED_ORIGINS = [o for o in csrf_env.split(',') if o]
 
 
 # Application definition
@@ -72,14 +76,24 @@ PASSWORD_HASHERS = [
 
 
 ROOT_URLCONF = 'zellis_back.urls'
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'zellis_database',
+#         'USER': 'zellis_user',
+#         'PASSWORD': 'zellis_password',
+#         'HOST': 'localhost',
+#         'PORT': '5432',
+#     }
+# }
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'zellis_database',
-        'USER': 'zellis_user',
-        'PASSWORD': 'zellis_password',
-        'HOST': 'localhost',
-        'PORT': '5432',
+        'NAME': os.getenv('POSTGRES_DB', 'zellis_database'),
+        'USER': os.getenv('POSTGRES_USER', 'zellis_user'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'zellis_password'),
+        'HOST': os.getenv('DB_HOST', 'db'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
